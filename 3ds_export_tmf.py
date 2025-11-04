@@ -910,14 +910,22 @@ def make_mesh_chunk(mesh, materialDict, ob, name_to_id, name_to_scale, name_to_p
     mesh1 = _3ds_chunk(OBJECT_TRANS_MATRIX);
 
     # 4KEX: 3DS mesh matrix. Apply the worldspace scale and positioning relative to the parent (if any).
-    if (ob.parent == None) or (ob.parent.name not in name_to_id):
-        matrix_pos = (name_to_pos[ob.name][0],name_to_pos[ob.name][1],name_to_pos[ob.name][2])
-        # this was originally
-        # matrix_pos = (-name_to_pos[ob.name][0],-name_to_pos[ob.name][1],-name_to_pos[ob.name][2])
-        # matrix_pos = (0.0,0.0,0.0)
+    # New if check will catch cases without parent better
+    if ob.parent is None or ob.parent.name not in name_to_id:
+        # No parent
+        matrix_pos = mathutils.Vector((
+            -name_to_pos[ob.name][0],
+            -name_to_pos[ob.name][1],
+            -name_to_pos[ob.name][2]
+        ))
     else:
-        # this code has been left as found, Glauco Bacchi
-        matrix_pos = mathutils.Vector((name_to_pos[ob.parent.name][0]-name_to_pos[ob.name][0],name_to_pos[ob.parent.name][1]-name_to_pos[ob.name][1],name_to_pos[ob.parent.name][2]-name_to_pos[ob.name][2])) * name_to_rot[ob.parent.name].to_matrix()
+        # Has parent
+        # Uses the new Blender mathutils methods
+        matrix_pos = name_to_rot[ob.parent.name].to_matrix() @ mathutils.Vector((
+            name_to_pos[ob.parent.name][0] - name_to_pos[ob.name][0],
+            name_to_pos[ob.parent.name][1] - name_to_pos[ob.name][1],
+            name_to_pos[ob.parent.name][2] - name_to_pos[ob.name][2]
+        ))
 
     ob_matrix = mathutils.Matrix()
     ob_matrix.identity()
@@ -1074,12 +1082,21 @@ def make_kf_obj_node(obj, name_to_id, name_to_scale, name_to_pos, name_to_rot):
     kf_obj_node.add_subchunk(obj_node_header_chunk)
 
     # 4KEX: Add a pivot point at the object centre
-    if (parent == None) or (parent.name not in name_to_id):
+    # Uses the new Blender mathutils methods
+    if parent is None or parent.name not in name_to_id:
+        #No parent
         pivot_pos = (0.0,0.0,0.0)
         # this was originally as follows, Glauco Bacchi
-        # pivot_pos = (name_to_pos[name][0],name_to_pos[name][1],name_to_pos[name][2])
+        # pivot_pos = (name_to_pos[name][0],name_to_pos[name][1],name_to_pos[name][2])    else:
     else:
-        pivot_pos = mathutils.Vector(((name_to_pos[name][0]-name_to_pos[parent.name][0]),(name_to_pos[name][1]-name_to_pos[parent.name][1]),(name_to_pos[name][2]-name_to_pos[parent.name][2]))) * name_to_rot[parent.name].to_matrix()
+        # Has parent
+        # Uses the new Blender mathutils methods
+        pivot_pos = name_to_rot[parent.name].to_matrix() @ mathutils.Vector((
+            name_to_pos[name][0] - name_to_pos[parent.name][0],
+            name_to_pos[name][1] - name_to_pos[parent.name][1],
+            name_to_pos[name][2] - name_to_pos[parent.name][2]
+        ))
+        
     obj_pivot_chunk = _3ds_chunk(OBJECT_PIVOT)
     obj_pivot_chunk.add_variable("pivot", _3ds_point_3d(pivot_pos))
     kf_obj_node.add_subchunk(obj_pivot_chunk)
@@ -1093,7 +1110,8 @@ def make_kf_obj_node(obj, name_to_id, name_to_scale, name_to_pos, name_to_rot):
     # Add track chunks for position, rotation and scale:
     # 4KEX: Compute the position and rotation of the object centre
     # 4KEX: The mesh has already been positioned around the object centre and scaled appropriately
-    if (parent == None) or (parent.name not in name_to_id):
+    # New if check will catch cases without parent better
+    if parent is None or parent.name not in name_to_id:
         # this was as I found it and works for TMU
         # but means we do not apply any scaling at all, Glauco Bacchi
         obj_size = (1.0,1.0,1.0)
@@ -1101,7 +1119,12 @@ def make_kf_obj_node(obj, name_to_id, name_to_scale, name_to_pos, name_to_rot):
         obj_rot = name_to_rot[name]
     else:
         obj_size = (1.0,1.0,1.0)
-        obj_pos = mathutils.Vector(((name_to_pos[name][0]-name_to_pos[parent.name][0]),(name_to_pos[name][1]-name_to_pos[parent.name][1]),(name_to_pos[name][2]-name_to_pos[parent.name][2]))) * name_to_rot[parent.name].to_matrix()
+        # Uses the new Blender mathutils methods
+        obj_pos = name_to_rot[parent.name].to_matrix() @ mathutils.Vector((
+            name_to_pos[name][0] - name_to_pos[parent.name][0],
+            name_to_pos[name][1] - name_to_pos[parent.name][1],
+            name_to_pos[name][2] - name_to_pos[parent.name][2]
+        ))
         obj_rot = name_to_rot[name].cross(name_to_rot[parent.name].copy().inverted())
 
     kf_obj_node.add_subchunk(make_track_chunk(SCL_TRACK_TAG, obj, obj_size, obj_pos, obj_rot))
