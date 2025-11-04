@@ -1087,7 +1087,7 @@ def make_kf_obj_node(obj, name_to_id, name_to_scale, name_to_pos, name_to_rot):
         #No parent
         pivot_pos = (0.0,0.0,0.0)
         # this was originally as follows, Glauco Bacchi
-        # pivot_pos = (name_to_pos[name][0],name_to_pos[name][1],name_to_pos[name][2])    else:
+        # pivot_pos = (name_to_pos[name][0],name_to_pos[name][1],name_to_pos[name][2])
     else:
         # Has parent
         # Uses the new Blender mathutils methods
